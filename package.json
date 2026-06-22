@@ -1,8 +1,8 @@
 {
-  "name": "bot-chanle",
+  "name": "bot",
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
-    "fca-horizon-remake": "*"
+    "fca-horizon-remake": "latest"
   }
 }
