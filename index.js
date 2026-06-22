@@ -1,4 +1,4 @@
-const login = require("fca-horizon-remastered");
+const login = require("fca-xiao");
 const fs = require("fs");
 
 // Kiểm tra và tạo database nếu chưa có
