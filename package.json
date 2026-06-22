@@ -2,8 +2,12 @@
   "name": "bot-chanle",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "fca-horizon-remake": "latest"
+    "fca-horizon-remake": "latest",
+    "http": "^0.0.1-security"
   },
   "engines": {
     "node": ">=16.0.0"
