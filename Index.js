@@ -1,14 +1,26 @@
-const login = require("fca-unofficial");
+const login = require("fca-horizon-remastered");
 const fs = require("fs");
+
+// Kiểm tra và tạo database nếu chưa có
+if (!fs.existsSync('database.json')) {
+    fs.writeFileSync('database.json', JSON.stringify({ users: {}, admins: ["100043777760301"] }, null, 2));
+}
 
 let db = JSON.parse(fs.readFileSync('database.json', 'utf8'));
 function saveData() { fs.writeFileSync('database.json', JSON.stringify(db, null, 2)); }
 
 login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, api) => {
-    if(err) return console.error(err);
+    if(err) {
+        console.error("Lỗi đăng nhập: ", err);
+        return;
+    }
+
+    console.log("Bot đã khởi động thành công!");
 
     api.listenMqtt((err, event) => {
+        if (err) return;
         if (event.type != "message") return;
+        
         const senderID = event.senderID;
         const msg = event.body.toLowerCase();
         
@@ -28,19 +40,32 @@ login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, ap
             }
         }
 
-        // Lệnh Đặt Cược
+        // Lệnh Đặt Cược (Chẵn/Lẻ)
         if (msg.startsWith("!chan") || msg.startsWith("!le")) {
-            const amount = parseInt(msg.split(" ")[1]);
-            if (isNaN(amount) || amount < 10000) return api.setMessageReaction("❌", event.messageID);
+            const args = msg.split(" ");
+            const amount = parseInt(args[1]);
+            const type = msg.startsWith("!chan") ? "chan" : "le";
+
+            if (isNaN(amount) || amount < 10000) {
+                return api.sendMessage("❌ Số tiền cược tối thiểu là 10.000!", event.threadID);
+            }
             
             if (db.users[senderID].balance < amount) {
-                api.setMessageReaction("❌", event.messageID);
-            } else {
-                db.users[senderID].balance -= amount;
-                saveData();
-                api.setMessageReaction("✅", event.messageID);
-                // Ở đây sau này sẽ là logic Random kết quả...
+                return api.sendMessage("❌ Bạn không đủ số dư!", event.threadID);
             }
+
+            // Logic Random kết quả (0: Chẵn, 1: Lẻ)
+            const result = Math.floor(Math.random() * 2);
+            const win = (type === "chan" && result === 0) || (type === "le" && result === 1);
+
+            if (win) {
+                db.users[senderID].balance += amount; // Thắng thì nhận thêm tiền
+                api.sendMessage(`✅ Kết quả: ${result === 0 ? "Chẵn" : "Lẻ"}. Chúc mừng bạn đã thắng!`, event.threadID);
+            } else {
+                db.users[senderID].balance -= amount; // Thua thì mất tiền
+                api.sendMessage(`❌ Kết quả: ${result === 0 ? "Chẵn" : "Lẻ"}. Tiếc quá, bạn đã thua!`, event.threadID);
+            }
+            saveData();
         }
 
         // Lệnh tiện ích
