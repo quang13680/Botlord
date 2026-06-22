@@ -1,7 +1,15 @@
 const login = require("fca-xiao");
 const fs = require("fs");
+const http = require("http");
 
-// Kiểm tra và tạo database nếu chưa có
+// --- PHẦN MỚI: TẠO WEB SERVER ĐỂ RENDER KHÔNG TỰ TẮT BOT ---
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is running!');
+});
+server.listen(process.env.PORT || 3000);
+// -----------------------------------------------------------
+
 if (!fs.existsSync('database.json')) {
     fs.writeFileSync('database.json', JSON.stringify({ users: {}, admins: ["100043777760301"] }, null, 2));
 }
@@ -24,13 +32,11 @@ login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, ap
         const senderID = event.senderID;
         const msg = event.body.toLowerCase();
         
-        // Tạo tài khoản nếu chưa có
         if (!db.users[senderID]) {
             db.users[senderID] = { name: "Người chơi", balance: 50000 };
             saveData();
         }
 
-        // Lệnh Admin
         if (msg == "!admin") api.sendMessage("ID của bạn là: " + senderID, event.threadID);
         if (db.admins.includes(senderID)) {
             if (msg == "!share") {
@@ -40,37 +46,29 @@ login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, ap
             }
         }
 
-        // Lệnh Đặt Cược (Chẵn/Lẻ)
         if (msg.startsWith("!chan") || msg.startsWith("!le")) {
             const args = msg.split(" ");
             const amount = parseInt(args[1]);
             const type = msg.startsWith("!chan") ? "chan" : "le";
 
-            if (isNaN(amount) || amount < 10000) {
-                return api.sendMessage("❌ Số tiền cược tối thiểu là 10.000!", event.threadID);
-            }
-            
-            if (db.users[senderID].balance < amount) {
-                return api.sendMessage("❌ Bạn không đủ số dư!", event.threadID);
-            }
+            if (isNaN(amount) || amount < 10000) return api.sendMessage("❌ Số tiền cược tối thiểu là 10.000!", event.threadID);
+            if (db.users[senderID].balance < amount) return api.sendMessage("❌ Bạn không đủ số dư!", event.threadID);
 
-            // Logic Random kết quả (0: Chẵn, 1: Lẻ)
             const result = Math.floor(Math.random() * 2);
             const win = (type === "chan" && result === 0) || (type === "le" && result === 1);
 
             if (win) {
-                db.users[senderID].balance += amount; // Thắng thì nhận thêm tiền
+                db.users[senderID].balance += amount;
                 api.sendMessage(`✅ Kết quả: ${result === 0 ? "Chẵn" : "Lẻ"}. Chúc mừng bạn đã thắng!`, event.threadID);
             } else {
-                db.users[senderID].balance -= amount; // Thua thì mất tiền
+                db.users[senderID].balance -= amount;
                 api.sendMessage(`❌ Kết quả: ${result === 0 ? "Chẵn" : "Lẻ"}. Tiếc quá, bạn đã thua!`, event.threadID);
             }
             saveData();
         }
 
-        // Lệnh tiện ích
         if (msg == "!check") api.sendMessage("Số dư của bạn là: " + db.users[senderID].balance.toLocaleString() + " VNĐ", event.threadID);
-        if (msg == "!gay" && db.users[senderID].balance < 20000) {
+        if (msg == "!cuutro" && db.users[senderID].balance < 20000) { // Đổi lệnh cho an toàn
             db.users[senderID].balance += 36000;
             saveData();
             api.sendMessage("Chúc mừng! Bạn đã được cứu trợ 36.000.", event.threadID);
