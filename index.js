@@ -2,14 +2,14 @@ const login = require("fca-horizon-remake");
 const fs = require("fs");
 const http = require("http");
 
-// --- PHẦN MỚI: TẠO WEB SERVER ĐỂ RENDER KHÔNG TỰ TẮT BOT ---
+// Tạo Web Server để Render không tắt bot
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot is running!');
 });
 server.listen(process.env.PORT || 3000);
-// -----------------------------------------------------------
 
+// Khởi tạo Database
 if (!fs.existsSync('database.json')) {
     fs.writeFileSync('database.json', JSON.stringify({ users: {}, admins: ["100043777760301"] }, null, 2));
 }
@@ -17,6 +17,7 @@ if (!fs.existsSync('database.json')) {
 let db = JSON.parse(fs.readFileSync('database.json', 'utf8'));
 function saveData() { fs.writeFileSync('database.json', JSON.stringify(db, null, 2)); }
 
+// Đăng nhập
 login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, api) => {
     if(err) {
         console.error("Lỗi đăng nhập: ", err);
@@ -26,8 +27,7 @@ login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, ap
     console.log("Bot đã khởi động thành công!");
 
     api.listenMqtt((err, event) => {
-        if (err) return;
-        if (event.type != "message") return;
+        if (err || event.type != "message") return;
         
         const senderID = event.senderID;
         const msg = event.body.toLowerCase();
@@ -38,6 +38,7 @@ login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, ap
         }
 
         if (msg == "!admin") api.sendMessage("ID của bạn là: " + senderID, event.threadID);
+        
         if (db.admins.includes(senderID)) {
             if (msg == "!share") {
                 for (let id in db.users) db.users[id].balance += 18000;
@@ -68,7 +69,7 @@ login({appState: JSON.parse(fs.readFileSync('appstate.json', 'utf8'))}, (err, ap
         }
 
         if (msg == "!check") api.sendMessage("Số dư của bạn là: " + db.users[senderID].balance.toLocaleString() + " VNĐ", event.threadID);
-        if (msg == "!cuutro" && db.users[senderID].balance < 20000) { // Đổi lệnh cho an toàn
+        if (msg == "!cuutro" && db.users[senderID].balance < 20000) {
             db.users[senderID].balance += 36000;
             saveData();
             api.sendMessage("Chúc mừng! Bạn đã được cứu trợ 36.000.", event.threadID);
